@@ -50,7 +50,8 @@ class poweremail_core_accounts(osv.osv):
     Object to store email account settings
     """
     _name = "poweremail.core_accounts"
-    _known_content_types = ['multipart/mixed',
+    _known_content_types = [
+                            'multipart/mixed',
                             'multipart/alternative',
                             'multipart/related',
                             'text/plain',
@@ -71,7 +72,8 @@ class poweremail_core_accounts(osv.osv):
         'smtpserver': fields.char('Server',
                         size=120, required=True,
                         readonly=True, states={'draft':[('readonly', False)]},
-                        help="Enter name of outgoing server,eg:smtp.gmail.com "),
+                        help="Enter name of outgoing server"
+                        "eg:smtp.gmail.com "),
         'smtpport': fields.integer('SMTP Port ',
                         size=64, required=True,
                         readonly=True, states={'draft':[('readonly', False)]},
@@ -96,7 +98,8 @@ class poweremail_core_accounts(osv.osv):
         'iserver':fields.char('Incoming Server',
                         size=100, readonly=True,
                         states={'draft':[('readonly', False)]},
-                        help="Enter name of incoming server,eg:imap.gmail.com "),
+                        help="Enter name of incoming server,"
+                        "eg:imap.gmail.com "),
         'isport': fields.integer('Port',
                         readonly=True, states={'draft':[('readonly', False)]},
                         help="For example IMAP: 993,POP3:995 "),
@@ -118,7 +121,8 @@ class poweremail_core_accounts(osv.osv):
         'isfolder':fields.char('Folder',
                         readonly=True, size=100,
                         help="Folder to be used for downloading IMAP mails\n" \
-                        "Click on adjacent button to select from a list of folders"),
+                        "Click on adjacent button to select from a list"
+                        " of folders"),
         'last_mail_id':fields.integer(
                         'Last Downloaded Mail', readonly=True),
         'rec_headers_den_mail':fields.boolean(
@@ -177,7 +181,8 @@ class poweremail_core_accounts(osv.osv):
         (
          'email_uniq',
          'unique (email_id)',
-         'Another setting already exists with this email ID !')
+         'Another setting already exists with this email ID !'
+        )
     ]
     
     def _constraint_unique(self, cursor, user, ids):
@@ -382,11 +387,12 @@ class poweremail_core_accounts(osv.osv):
                                  _("Reason: %s") % error
                                  )
             
-    def do_approval(self, cr, uid, ids, context={}):
-        #TODO: Check if user has rights
-        self.write(cr, uid, ids, {'state':'approved'}, context=context)
-#        wf_service = netsvc.LocalService("workflow")
-
+    def do_approval(self, cursor, user, ids, context={}):
+        """
+        Approves the given mail account
+        """
+        return self.write(cursor, user, ids, {'state':'approved'}, context=context)
+        
     def smtp_connection(self, cursor, user, id, context=None):
         """
         This method should now wrap smtp_connection
@@ -394,25 +400,35 @@ class poweremail_core_accounts(osv.osv):
         #This function returns a SMTP server object
         logger = netsvc.Logger()
         core_obj = self.browse(cursor, user, id, context)
-        if core_obj.smtpserver and core_obj.smtpport and core_obj.state == 'approved':
+        if core_obj.smtpserver and core_obj.smtpport and \
+               core_obj.state == 'approved':
             try:
-                serv = self._get_outgoing_server(cursor, user, id, context)
+                server = self._get_outgoing_server(cursor, user, id, context)
             except Exception, error:
-                logger.notifyChannel(_("Power Email"), netsvc.LOG_ERROR, _("Mail from Account %s failed on login. Probable Reason:Could not login to server\nError: %s") % (id, error))
-                return False
-            #Everything is complete, now return the connection
-            return serv
+                logger.notifyChannel(
+                    _("Power Email"),
+                    netsvc.LOG_ERROR,
+                    _("Mail from Account %s failed on login."
+                      " Probable Reason:Could not login to server"
+                      "\nError: %s") % (id, error))
+            return server
         else:
-            logger.notifyChannel(_("Power Email"), netsvc.LOG_ERROR, _("Mail from Account %s failed. Probable Reason:Account not approved") % id)
-            return False
-                      
+            logger.notifyChannel(
+                _("Power Email"),
+                netsvc.LOG_ERROR,
+                _("Mail from Account %s failed."
+                  " Probable Reasons:Account not approved/SMTP login failed") % id)
+            
 #**************************** MAIL SENDING FEATURES ***********************#
     def split_to_ids(self, ids_as_str):
         """
         Identifies email IDs separated by separators
         and returns a list
-        TODO: Doc this
+        TODO: This method could be a function in tools
+        :param ids_as_str: Identifies email IDs from a single string separated
+                           by known separators
         "a@b.com,c@bcom; d@b.com;e@b.com->['a@b.com',...]"
+        :return List of Email IDs
         """
         email_sep_by_commas = ids_as_str \
                                     .replace('; ', ',') \
@@ -420,11 +436,17 @@ class poweremail_core_accounts(osv.osv):
                                     .replace(', ', ',')
         return email_sep_by_commas.split(',')
     
-    def get_ids_from_dict(self, addresses={}):
+    def get_ids_from_dict(self, addresses=None):
         """
-        TODO: Doc this
+        The TO,CC,BCC Ids if passed in a dictionary are cleaned by the
+        separators and a new item for all addresses is also genarated
+
+        TODO: This method could be a function in tools
+        :param addresses Dictionary of type {'To':'sharoon.thomas@xyz.com'}
         """
         result = {'all':[]}
+        if not addresses:
+            return result
         keys = ['To', 'CC', 'BCC']
         for each in keys:
             ids_as_list = self.split_to_ids(addresses.get(each, u''))
@@ -505,12 +527,16 @@ class poweremail_core_accounts(osv.osv):
                                 
     def extracttime(self, time_as_string):
         """
-        TODO: DOC THis
+        The standard email dates are of format similar to:
+        Thu, 8 Oct 2009 09:35:42 +0200
+
+        Open ERP does not use a datetime object to manipulate dates,
+        So this function converts the data in whatever format it is to Open ERP
+        Datetime database representation of YYYY-MM-DD HH:MM:SS
+
+        TODO: Investigate if the extract time method of HTTP module can be used
         """
         logger = netsvc.Logger()
-        #The standard email dates are of format similar to:
-        #Thu, 8 Oct 2009 09:35:42 +0200
-        #print time_as_string
         date_as_date = False
         convertor = {'+':1, '-':-1}
         try:
@@ -549,22 +575,20 @@ class poweremail_core_accounts(osv.osv):
                 offset = datetime.timedelta(hours=0)
             dt = dt + offset
             date_as_date = dt.strftime('%Y-%m-%d %H:%M:%S')
-            #print date_as_date
-        except Exception, e:
+        except Exception, exc:
             logger.notifyChannel(
                     _("Power Email"),
                     netsvc.LOG_WARNING,
                     _(
                       "Datetime Extraction failed.Date:%s \
-                      \tError:%s") % (
-                                    time_as_string,
-                                    e)
-                      )
+                      \tError:%s"
+                    ) % (time_as_string, exc)
         return date_as_date
         
     def save_header(self, cr, uid, mail, coreaccountid, serv_ref, context=None):
         """
         TODO:DOC this
+        TODO:Convert cr,uid crap naming to cursor, user
         """
         if context is None:
             context = {}
@@ -633,6 +657,7 @@ class poweremail_core_accounts(osv.osv):
     def save_fullmail(self, cr, uid, mail, coreaccountid, serv_ref, context=None):
         """
         TODO: Doc this
+        TODO:Convert cr,uid crap naming to cursor, user
         """
         if context is None:
             context = {}
