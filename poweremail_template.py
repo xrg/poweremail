@@ -1015,9 +1015,10 @@ class poweremail_templates(osv.osv):
                                                 {'folder':'outbox'},
                                                 context=context
                                                       )
-        return True
+        return mailbox_id
 
 poweremail_templates()
+
 
 class poweremail_preview(osv.osv_memory):
     _name = "poweremail.preview"
