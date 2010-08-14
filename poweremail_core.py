@@ -582,7 +582,7 @@ class poweremail_core_accounts(osv.osv):
                     _(
                       "Datetime Extraction failed.Date:%s \
                       \tError:%s"
-                    ) % (time_as_string, exc)
+                    ) % (time_as_string, exc))
         return date_as_date
         
     def save_header(self, cr, uid, mail, coreaccountid, serv_ref, context=None):
