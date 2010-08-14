@@ -960,6 +960,7 @@ class poweremail_templates(osv.osv):
                       context=None):
         if context is None:
             context = {}
+        mailbox_id = False
         template = self.browse(cursor, user, template_id, context=context)
         if not template:
             raise Exception("The requested template could not be loaded")
