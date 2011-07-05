@@ -192,7 +192,7 @@ class poweremail_send_wizard(osv.osv_memory):
         mail_ids = []
         template = self._get_template(cr, uid, context)
         for id in context['src_rec_ids']:
-            screen_vals = self.read(cr, uid, ids[0], [],context)[0]
+            screen_vals = self.read(cr, uid, ids[0], [], context)
             accounts = self.pool.get('poweremail.core_accounts').read(cr, uid, screen_vals['from'], context=context)
             vals = {
                 'pem_from': tools.ustr(accounts['name']) + "<" + tools.ustr(accounts['email_id']) + ">",
